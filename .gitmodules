@@ -1,0 +1,3 @@
+[submodule "sound_feature_extractor"]
+	path = sound_feature_extractor
+	url = https://github.com/cadurosar/weak_feature_extractor
