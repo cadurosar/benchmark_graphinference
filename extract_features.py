@@ -2,10 +2,15 @@ import torchvision
 import torch
 import numpy as np
 import os
+import pandas
+import tqdm
+import sound_feature_extractor
 
-datasets = ['STL','AudioSet','IMDB']
+datasets = ['STL','ESC-50','IMDB']
 dataset_default = "STL"
-data_path_default = os.path.join("~","data")
+home = os.path.expanduser("~")
+
+data_path_default = os.path.join(home,"data")
 refined_path_default = "refined_datasets/"
 
 def extract_features(dataset=dataset_default, data_path=data_path_default, refined_path=refined_path_default, save_raw=False):
@@ -50,6 +55,38 @@ def extract_features(dataset=dataset_default, data_path=data_path_default, refin
         np.savez(os.path.join(refined_path,"features","stl.npz"), x=features.reshape(features.shape[0],-1), y=labels)
         if save_raw:
             np.savez(os.path.join(refined_path,"raw","stl.npz"), x=images.reshape(images.shape[0],-1), y=labels)
+    elif dataset == "ESC-50":
+        data_path = os.path.join(home,"data")
+        esc_path = "ESC-50-master"
+        csv_path = os.path.join(esc_path,"meta","esc50.csv")
+        audio_path = os.path.join(data_path,esc_path,"audio")
+        df = pandas.read_csv(os.path.join(data_path,csv_path))
+
+        labels = list()
+        all_features = list()
+        if save_raw:
+            sound = list()
+
+        for idx, line in tqdm.tqdm(df.iterrows(),total=df.shape[0]):
+            filename = line["filename"]
+            target = line["target"]
+            _input = sound_feature_extractor.file_to_input(os.path.join(audio_path,filename))
+            if save_raw:
+                sounds.append(_input)
+            extractor = sound_feature_extractor.get_extractor(pre_model_path="sound_feature_extractor/pretrained_model.pkl")   
+            features = sound_feature_extractor.get_features(extractor,_input)
+            features = features.cpu().numpy()
+            all_features.append(features)
+            labels.append([target])
+        if save_raw:
+            sounds = np.concatenate(sounds)    
+        features = np.concatenate(all_features)
+        labels = np.concatenate(labels)
+        print(np.bincount(labels),features.shape,labels.shape)
+        np.savez(os.path.join(refined_path,"features","esc-50.npz"), x=features.reshape(features.shape[0],-1), y=labels)
+        if save_raw:
+            np.savez(os.path.join(refined_path,"raw","esc-50.npz"), x=images.reshape(images.shape[0],-1), y=labels)
+        
     
 if __name__ == "__main__":
     import argparse

@@ -5,7 +5,7 @@ import numpy as np
 import generate_graph
 import os
 
-datasets = ['STL','AudioSet','IMDB']
+datasets = ['STL','ESC-50','IMDB']
 dataset_default = datasets[0]
 refined_path_default = "refined_datasets/features"
 graph_path_default = os.path.join("graph","STL_Cosine_False_0_None.gz")
@@ -14,12 +14,17 @@ def run_unsupervised_benchmark(dataset=dataset_default,graph_path=graph_path_def
     if dataset == "STL":
         file = "stl.npz"
         nodes = 1000
+        n_clusters = 10
+    elif dataset == "ESC-50":
+        file = "esc-50.npz"
+        nodes = 2000
+        n_clusters = 50
     file_path = os.path.join(refined_path_default,file)
     data = np.load(file_path)
 
     labels = data["y"]
     graph = generate_graph.read_adjacence_matrix(nodes,graph_path)
-    clustering = sklearn.cluster.SpectralClustering(n_clusters=10,assign_labels="kmeans",n_init=1000,random_state=0,affinity="precomputed")
+    clustering = sklearn.cluster.SpectralClustering(n_clusters=n_clusters,assign_labels="discretize",n_init=1000,random_state=0,affinity="precomputed")
     labels_result = clustering.fit_predict(graph)
     AMI = 100*sklearn.metrics.adjusted_mutual_info_score(labels, labels_result,average_method="arithmetic")
     NMI = 100*sklearn.metrics.normalized_mutual_info_score(labels, labels_result,average_method="arithmetic")

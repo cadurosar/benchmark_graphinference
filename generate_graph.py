@@ -8,7 +8,7 @@ import numpy as np
 import os
 import gzip
 
-datasets = ['STL','AudioSet','IMDB']
+datasets = ['STL','ESC-50','IMDB']
 dataset_default = datasets[0]
 graph_types = ["Cosine",'RBF','Covariance',"GraphLasso"]
 graph_type_default = graph_types[0]
@@ -17,7 +17,7 @@ refined_path_default = "refined_datasets/features"
 normalizations = ["None","RandomWalk","BothSides"]
 normalization_default = "None"
 
-def save_adjacence_matrix(adjacence_matrix, file_path, precision=3):
+def save_adjacence_matrix(adjacence_matrix, file_path, precision=None):
     with gzip.open(file_path, 'wb') as f:
         for idx in range(adjacence_matrix.shape[0]):
             line = adjacence_matrix[idx,:]
@@ -95,6 +95,8 @@ def generate_graph(dataset=dataset_default,graph_type=graph_type_default,minmaxs
 
     if dataset == "STL":
         file = "stl.npz"
+    if dataset == "ESC-50":
+        file = "esc-50.npz"
     file_path = os.path.join(refined_path_default,file)
     data = np.load(file_path)
     features = data["x"]
