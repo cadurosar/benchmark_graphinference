@@ -6,7 +6,7 @@ import pandas
 import tqdm
 import sound_feature_extractor
 
-datasets = ['STL','ESC-50','IMDB']
+datasets = ['STL',"flowers102",'ESC-50','IMDB']
 dataset_default = "STL"
 home = os.path.expanduser("~")
 
@@ -15,21 +15,29 @@ refined_path_default = "refined_datasets/"
 
 def extract_features(dataset=dataset_default, data_path=data_path_default, refined_path=refined_path_default, save_raw=False):
 
-    if dataset == "STL":
+    if dataset == "STL" or dataset=="flowers102":
 
         transform_data = torchvision.transforms.Compose([
+#            torchvision.transforms.Resize(342),
             torchvision.transforms.Resize(299),
+            torchvision.transforms.CenterCrop(299),
             torchvision.transforms.ToTensor(),
             ])
 
-        model=torchvision.models.inception_v3(pretrained=True)
+        model=torchvision.models.inception_v3(pretrained=True,transform_input=True)
         ## Remove the last layer
         model.fc = torch.nn.Sequential()
         model.eval()
         model.cuda()
         train_sets = list()
         dataloaders = list()
-        fold_set = torchvision.datasets.STL10(data_path,folds=0,split="train",download=True,transform=transform_data)
+        if dataset == "STL":
+            fold_set = torchvision.datasets.STL10(data_path,folds=0,split="train",download=True,transform=transform_data)
+            name = "stl.npz"
+        elif dataset == "flowers102":
+            fold_set = torchvision.datasets.ImageFolder(os.path.join(data_path,"102flowers","training"),transform=transform_data)
+            name = "flowers102.npz"
+            
         dataloader = torch.utils.data.DataLoader(
                 fold_set,
                 batch_size=50,
@@ -42,6 +50,7 @@ def extract_features(dataset=dataset_default, data_path=data_path_default, refin
             images = list()
         with torch.no_grad():
             for batch_id, (x, y) in enumerate(dataloader):
+                print(x.shape,y.shape)
                 if save_raw:
                     images.append(x.cpu().numpy())
                 new_x = model(x.cuda()) 
@@ -51,10 +60,10 @@ def extract_features(dataset=dataset_default, data_path=data_path_default, refin
             images = np.concatenate(images)
         features = np.concatenate(features)
         labels = np.concatenate(labels)
-        print(np.bincount(labels))
-        np.savez(os.path.join(refined_path,"features","stl.npz"), x=features.reshape(features.shape[0],-1), y=labels)
+        print(features.shape,labels.shape,np.bincount(labels))
+        np.savez(os.path.join(refined_path,"features",name), x=features.reshape(features.shape[0],-1), y=labels)
         if save_raw:
-            np.savez(os.path.join(refined_path,"raw","stl.npz"), x=images.reshape(images.shape[0],-1), y=labels)
+            np.savez(os.path.join(refined_path,"raw",name), x=images.reshape(images.shape[0],-1), y=labels)
     elif dataset == "ESC-50":
         data_path = os.path.join(home,"data")
         esc_path = "ESC-50-master"

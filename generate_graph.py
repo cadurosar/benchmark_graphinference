@@ -8,7 +8,7 @@ import numpy as np
 import os
 import gzip
 
-datasets = ['STL','ESC-50','IMDB']
+datasets = ['STL',"flowers102",'ESC-50','IMDB']
 dataset_default = datasets[0]
 graph_types = ["Cosine",'RBF','Covariance',"GraphLasso"]
 graph_type_default = graph_types[0]
@@ -95,8 +95,10 @@ def generate_graph(dataset=dataset_default,graph_type=graph_type_default,minmaxs
 
     if dataset == "STL":
         file = "stl.npz"
-    if dataset == "ESC-50":
+    elif dataset == "ESC-50":
         file = "esc-50.npz"
+    elif dataset == "flowers102":
+        file = "flowers102.npz"
     file_path = os.path.join(refined_path_default,file)
     data = np.load(file_path)
     features = data["x"]
@@ -165,5 +167,5 @@ if __name__ == "__main__":
 
 
     args = parser.parse_args()
-    
+    print(args)
     generate_graph(dataset=args.dataset,graph_type=args.graph_type,minmaxscaler=args.minmaxscaler,refined_path=args.refined_path,normalization=args.normalization,nn=args.nn)
