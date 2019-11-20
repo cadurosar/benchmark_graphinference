@@ -10,7 +10,7 @@ dataset_default = datasets[0]
 refined_path_default = "refined_datasets/features"
 graph_path_default = os.path.join("graph","STL_Cosine_False_0_None.gz")
 
-def run_unsupervised_benchmark(dataset=dataset_default,graph_path=graph_path_default,refined_path=refined_path_default):
+def run_unsupervised_benchmark(dataset=dataset_default,graph_path=graph_path_default,refined_path=refined_path_default,assign_labels="discretize"):
     if dataset == "STL":
         file = "stl.npz"
         nodes = 1000
@@ -23,12 +23,13 @@ def run_unsupervised_benchmark(dataset=dataset_default,graph_path=graph_path_def
         file = "flowers102.npz"
         nodes = 1020
         n_clusters = 102
-    file_path = os.path.join(refined_path_default,file)
+    file_path = os.path.join(refined_path,file)
     data = np.load(file_path)
 
     labels = data["y"]
     graph = generate_graph.read_adjacence_matrix(nodes,graph_path)
-    clustering = sklearn.cluster.SpectralClustering(n_clusters=n_clusters,assign_labels="discretize",n_init=1000,random_state=0,affinity="precomputed")
+    np.fill_diagonal(graph,1)
+    clustering = sklearn.cluster.SpectralClustering(n_clusters=n_clusters,assign_labels=assign_labels,n_init=1000,random_state=0,affinity="precomputed")
     labels_result = clustering.fit_predict(graph)
     AMI = 100*sklearn.metrics.adjusted_mutual_info_score(labels, labels_result,average_method="arithmetic")
     NMI = 100*sklearn.metrics.normalized_mutual_info_score(labels, labels_result,average_method="arithmetic")

@@ -105,8 +105,6 @@ def generate_graph(dataset=dataset_default,graph_type=graph_type_default,minmaxs
     labels = data["y"]
     if minmaxscaler:
         scaler = sklearn.preprocessing.MinMaxScaler(feature_range=(0, 1))
-        index = 1
-        index_max = features[index].argmax()
         features = scaler.fit_transform(features)
     if graph_type == "Covariance":
         graph = covariance(features)
@@ -127,14 +125,14 @@ def generate_graph(dataset=dataset_default,graph_type=graph_type_default,minmaxs
         graph = create_knnadjacence_matrix(graph,args.nn)[1]
 
     if normalization == "RandomWalk":
-        np.fill_diagonal(graph, 0)
         d = np.sum(graph, 1)
+        d[d==0] = 1 # Avoid division by 0
         d = np.power(d,-1)
         d = np.diag(d)
         graph = np.dot(d,graph)
     elif normalization == "BothSides":
-        np.fill_diagonal(graph, 0)
         d = np.sum(graph, 1)
+        d[d==0] = 1  # Avoid division by 0
         d = np.power(d,-1/2)
         d = np.diag(d)
         graph = np.dot(np.dot(d,graph),d)
