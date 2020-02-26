@@ -5,8 +5,11 @@ import os
 import pandas
 import tqdm
 import sound_feature_extractor
+import sklearn
+import sklearn.preprocessing
 
-datasets = ['STL',"flowers102",'ESC-50','IMDB']
+ESC_PATH = "ESC-50-master"
+datasets = ['STL',"flowers102",'ESC-50','cora']
 dataset_default = "STL"
 home = os.path.expanduser("~")
 
@@ -64,17 +67,29 @@ def extract_features(dataset=dataset_default, data_path=data_path_default, refin
         np.savez(os.path.join(refined_path,"features",name), x=features.reshape(features.shape[0],-1), y=labels)
         if save_raw:
             np.savez(os.path.join(refined_path,"raw",name), x=images.reshape(images.shape[0],-1), y=labels)
+    elif dataset == "cora":
+        cora_path = os.path.join(data_path,"cora")
+        cora_content = os.path.join(cora_path,"cora.content")
+        name = "cora.npz"
+        feature_columns = ["f_{}".format(i) for i in range(1433)]
+        class_column = "class"
+        columns =  feature_columns + [class_column]
+        nodes = pandas.read_csv(cora_content, sep='\t', names=columns, header=None)
+        features = nodes[feature_columns].to_numpy().astype(np.float32)
+        labels = sklearn.preprocessing.LabelEncoder().fit_transform(nodes[class_column].to_numpy()).astype(np.int32)
+        np.savez(os.path.join(refined_path,"features",name), x=features.reshape(features.shape[0],-1), y=labels)
+        print(features.shape,labels.shape,np.bincount(labels))
+
+        pass
     elif dataset == "ESC-50":
-        data_path = os.path.join(home,"data")
-        esc_path = "ESC-50-master"
-        csv_path = os.path.join(esc_path,"meta","esc50.csv")
-        audio_path = os.path.join(data_path,esc_path,"audio")
+        csv_path = os.path.join(ESC_PATH,"meta","esc50.csv")
+        audio_path = os.path.join(data_path,ESC_PATH,"audio")
         df = pandas.read_csv(os.path.join(data_path,csv_path))
 
         labels = list()
         all_features = list()
         if save_raw:
-            sound = list()
+            sounds = list()
 
         for idx, line in tqdm.tqdm(df.iterrows(),total=df.shape[0]):
             filename = line["filename"]

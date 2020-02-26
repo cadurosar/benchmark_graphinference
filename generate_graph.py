@@ -8,12 +8,13 @@ import numpy as np
 import os
 import gzip
 
-datasets = ['STL',"flowers102",'ESC-50','IMDB']
+datasets = ['STL',"flowers102",'ESC-50',"cora"]
 dataset_default = datasets[0]
 graph_types = ["Cosine",'RBF','Covariance',"GraphLasso"]
 graph_type_default = graph_types[0]
 nn_default = 0
-refined_path_default = "refined_datasets/features"
+refined_path_default = os.path.join("refined_datasets","features")
+save_path_default = os.path.join("graph")
 normalizations = ["None","RandomWalk","BothSides"]
 normalization_default = "None"
 
@@ -68,8 +69,8 @@ def covariance(matrix):
     w = f * a
     v1 = np.sum(w)
     v2 = np.sum(a)
-    m -= np.sum(m * w, axis=1, keepdims=True) / v1
-    _cov = np.dot(m * w, m.T) * v1 / (v1**2)    
+    alfa = np.sum(m, axis=1, keepdims=True) / v1
+    _cov = np.dot(m-alfa, (m-alfa).T) / v1    
     return _cov
     
 def create_knnadjacence_matrix(matrix,k=4,symmetric = True):
@@ -91,7 +92,7 @@ def knn_over_matrix(matrix,k=4):
 def force_symmetry(matrix):
     return np.minimum(matrix+matrix.T,1)
 
-def generate_graph(dataset=dataset_default,graph_type=graph_type_default,minmaxscaler=False,nn=nn_default,refined_path=refined_path_default,normalization=normalization_default):
+def generate_graph(dataset=dataset_default,graph_type=graph_type_default,minmaxscaler=False,nn=nn_default,refined_path=refined_path_default,normalization=normalization_default,save_path=save_path_default):
 
     if dataset == "STL":
         file = "stl.npz"
@@ -99,8 +100,10 @@ def generate_graph(dataset=dataset_default,graph_type=graph_type_default,minmaxs
         file = "esc-50.npz"
     elif dataset == "flowers102":
         file = "flowers102.npz"
+    elif dataset == "cora":
+        file = "cora.npz"
     file_path = os.path.join(refined_path_default,file)
-    data = np.load(file_path)
+    data = np.load(file_path,allow_pickle=True)
     features = data["x"]
     labels = data["y"]
     if minmaxscaler:
@@ -136,8 +139,8 @@ def generate_graph(dataset=dataset_default,graph_type=graph_type_default,minmaxs
         d = np.power(d,-1/2)
         d = np.diag(d)
         graph = np.dot(np.dot(d,graph),d)
-    save_path = os.path.join("graph","{}_{}_{}_{}_{}.gz".format(dataset,graph_type,minmaxscaler,nn,normalization))
-    save_adjacence_matrix(graph,save_path)
+    save_file = os.path.join(save_path,"{}_{}_{}_{}_{}.gz".format(dataset,graph_type,minmaxscaler,nn,normalization))
+    save_adjacence_matrix(graph,save_file)
     return graph
 
 if __name__ == "__main__":
@@ -158,6 +161,9 @@ if __name__ == "__main__":
     parser.add_argument('--normalization',
                           choices=normalizations, default=normalization_default,
                           help='Adjacency matrix normalization')
+    parser.add_argument('--save_path',
+                          type=str, default=save_path_default,
+                          help='Refined dataset path')
 
     parser.add_argument('--nn',
                           type=int, default=nn_default,
@@ -166,4 +172,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     print(args)
-    generate_graph(dataset=args.dataset,graph_type=args.graph_type,minmaxscaler=args.minmaxscaler,refined_path=args.refined_path,normalization=args.normalization,nn=args.nn)
+    generate_graph(dataset=args.dataset,graph_type=args.graph_type,minmaxscaler=args.minmaxscaler,refined_path=args.refined_path,normalization=args.normalization,nn=args.nn,save_path=args.save_path)

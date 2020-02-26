@@ -17,7 +17,7 @@ SGC.utils.set_seed(0, True)
 random_state = np.random.RandomState(0)
 use_cuda = True
 
-datasets = ['STL',"flowers102",'ESC-50','IMDB']
+datasets = ['STL',"flowers102",'ESC-50',"cora"]
 dataset_default = datasets[0]
 refined_path_default = "refined_datasets/features"
 graph_path_default = os.path.join("graph","STL_Cosine_False_0_None.gz")
@@ -242,21 +242,29 @@ def run_semi_supervised_benchmark(dataset=dataset_default,refined_path=refined_p
     if dataset == "STL":
         file = "stl.npz"
         nodes = 1000
+        n_clusters = 10
     elif dataset == "ESC-50":
         file = "esc-50.npz"
         nodes = 2000
+        n_clusters = 50
     elif dataset == "flowers102":
         file = "flowers102.npz"
         nodes = 1020
+        n_clusters = 102
+    elif dataset == "cora":
+        file = "cora.npz"
+        nodes = 2708
+        n_clusters = 7
+
     file_path = os.path.join(refined_path_default,file)
-    data = np.load(file_path)
+    data = np.load(file_path,allow_pickle=True)
     features = data["x"]
     labels = data["y"]
     graph = generate_graph.read_adjacence_matrix(nodes,graph_path)
-   
+    train_examples = max(1,nodes//(20*n_clusters))
     idx_train,idx_val,idx_test = get_train_val_test_split(random_state,
                              labels,
-                             train_examples_per_class=2, val_size=0)
+                             train_examples_per_class=int(train_examples), val_size=0)
     if minmaxscaler:
         scaler = sklearn.preprocessing.MinMaxScaler(feature_range=(0, 1))
         features = scaler.fit_transform(features)
