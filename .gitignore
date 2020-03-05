@@ -107,3 +107,4 @@ graph/*
 kalofolias_matlab/
 kalofolias_minmax/
 convert_kalofolias*
+settings.json
