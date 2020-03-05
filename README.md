@@ -88,12 +88,12 @@ To reproduce the results of the paper, first you have to run the graph_denoising
 
 AMI scores:
 
-|        Method       | Inference/Dataset | ESC-50 | cora | flowers102 |
-|:-------------------:|:-----------------:|:------:|:----:|:----------:|
-|       C-means       |                   |  0.59  | 0.10 |    0.36    |
-| Spectral clustering |       Naive       |  0.65  | 0.34 |    0.46    |
-| Spectral clustering |        NNK        |  0.66  | 0.34 |    0.44    |
-| Spectral clustering |     Kalofolias    |  0.65  | 0.27 |    0.44    |
+|        Method       | Inference/Dataset | ESC-50 | cora   | flowers102 |
+|:-------------------:|:-----------------:|:------:|:------:|:----------:|
+|       C-means       |                   |  0.59  | 0.10   |    0.36    |
+| Spectral clustering |       Naive       |  0.65  |**0.34**|  **0.46**  |
+| Spectral clustering |        NNK        |**0.66**|**0.34**|    0.44    |
+| Spectral clustering |     Kalofolias    |  0.65  | 0.27   |    0.44    |
 
 We also provide non aggregated results in results/unsupervised.csv
 
@@ -120,7 +120,7 @@ We also provide non aggregated results in results/sgc.csv and results/labelprop.
 |--------------|----------------|
 | No denoising | 7              |
 | Real graph   | 10.32          |
-| Kalofolias   | \textbf{10.41} |
+| Kalofolias   | **10.41**      |
 | RBF NNK      | 9.99           |
 | RBF KNN      | 9.80           |
 
