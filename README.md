@@ -109,8 +109,8 @@ Mean test accuracy +- Standard deviation
 |  Label Propagation  |        NNK        |      57.44% +- 2.2     |      58.66% +- 2.9     |      33.57% +- 1.6     |
 |  Label Propagation  |     Kalofolias    |      59.16% +- 1.8     |      58.60% +- 3.4     |      37.01% +- 1.7     |
 |         SGC         |       Naive       |      60.48% +- 2.0     |      67.19% +- 1.5     |      37.73% +- 1.5     |
-|  Label Propagation  |        NNK        |      61.38% +- 2.0     |      66.58% +- 1.5     |      36.81% +- 1.5     |
-|  Label Propagation  |     Kalofolias    |      59.36% +- 2.0     |      66.28% +- 1.5     |      37.5% +- 1.5      |
+|         SGC         |        NNK        |      61.38% +- 2.0     |      66.58% +- 1.5     |      36.81% +- 1.5     |
+|         SGC         |     Kalofolias    |      59.36% +- 2.0     |      66.28% +- 1.5     |      37.5% +- 1.5      |
 
 We also provide non aggregated results in results/sgc.csv and results/labelprop.csv
 
