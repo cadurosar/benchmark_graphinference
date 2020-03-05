@@ -104,3 +104,6 @@ venv.bak/
 .mypy_cache/
 */raw
 graph/*
+kalofolias_matlab/
+kalofolias_minmax/
+convert_kalofolias*
