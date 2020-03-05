@@ -7,9 +7,10 @@ import tqdm
 import sound_feature_extractor
 import sklearn
 import sklearn.preprocessing
+import scipy
 
 ESC_PATH = "ESC-50-master"
-datasets = ['STL',"flowers102",'ESC-50','cora']
+datasets = ['STL',"flowers102",'ESC-50','cora',"toronto"]
 dataset_default = "STL"
 home = os.path.expanduser("~")
 
@@ -32,14 +33,12 @@ def extract_features(dataset=dataset_default, data_path=data_path_default, refin
         model.fc = torch.nn.Sequential()
         model.eval()
         model.cuda()
-        train_sets = list()
-        dataloaders = list()
         if dataset == "STL":
             fold_set = torchvision.datasets.STL10(data_path,folds=0,split="train",download=True,transform=transform_data)
-            name = "stl.npz"
+            name = "stl"
         elif dataset == "flowers102":
             fold_set = torchvision.datasets.ImageFolder(os.path.join(data_path,"102flowers","training"),transform=transform_data)
-            name = "flowers102.npz"
+            name = "flowers102"
             
         dataloader = torch.utils.data.DataLoader(
                 fold_set,
@@ -52,8 +51,7 @@ def extract_features(dataset=dataset_default, data_path=data_path_default, refin
         if save_raw:
             images = list()
         with torch.no_grad():
-            for batch_id, (x, y) in enumerate(dataloader):
-                print(x.shape,y.shape)
+            for (x, y) in dataloader:
                 if save_raw:
                     images.append(x.cpu().numpy())
                 new_x = model(x.cuda()) 
@@ -64,28 +62,68 @@ def extract_features(dataset=dataset_default, data_path=data_path_default, refin
         features = np.concatenate(features)
         labels = np.concatenate(labels)
         print(features.shape,labels.shape,np.bincount(labels))
-        np.savez(os.path.join(refined_path,"features",name), x=features.reshape(features.shape[0],-1), y=labels)
+        np.savez(os.path.join(refined_path,"features",name+".npz"), x=features.reshape(features.shape[0],-1), y=labels)
+
+        #Prepare for matlab
+        matlab_dict = dict(x=features.reshape(features.shape[0],-1).T,y=labels)
+        scipy.io.savemat(os.path.join(refined_path,"features",name+".mat"),matlab_dict)
+
+        scaler = sklearn.preprocessing.MinMaxScaler(feature_range=(0, 1))
+        features = scaler.fit_transform(features.reshape(features.shape[0],-1))
+        matlab_dict = dict(x=features.reshape(features.shape[0],-1).T,y=labels)
+        scipy.io.savemat(os.path.join(refined_path,"features",name+"_minmaxscaled.mat"),matlab_dict)
+
         if save_raw:
             np.savez(os.path.join(refined_path,"raw",name), x=images.reshape(images.shape[0],-1), y=labels)
     elif dataset == "cora":
         cora_path = os.path.join(data_path,"cora")
         cora_content = os.path.join(cora_path,"cora.content")
-        name = "cora.npz"
+        name = "cora"
         feature_columns = ["f_{}".format(i) for i in range(1433)]
         class_column = "class"
         columns =  feature_columns + [class_column]
         nodes = pandas.read_csv(cora_content, sep='\t', names=columns, header=None)
         features = nodes[feature_columns].to_numpy().astype(np.float32)
         labels = sklearn.preprocessing.LabelEncoder().fit_transform(nodes[class_column].to_numpy()).astype(np.int32)
-        np.savez(os.path.join(refined_path,"features",name), x=features.reshape(features.shape[0],-1), y=labels)
+        np.savez(os.path.join(refined_path,"features",name+".npz"), x=features.reshape(features.shape[0],-1), y=labels)
         print(features.shape,labels.shape,np.bincount(labels))
 
+        #Prepare for matlab
+        matlab_dict = dict(x=features.reshape(features.shape[0],-1).T,y=labels)
+        scipy.io.savemat(os.path.join(refined_path,"features",name+".mat"),matlab_dict)
+
+        scaler = sklearn.preprocessing.MinMaxScaler(feature_range=(0, 1))
+        features = scaler.fit_transform(features.reshape(features.shape[0],-1))
+        matlab_dict = dict(x=features.reshape(features.shape[0],-1).T,y=labels)
+        scipy.io.savemat(os.path.join(refined_path,"features",name+"_minmaxscaled.mat"),matlab_dict)
+
+
         pass
+    elif dataset == "toronto":
+        toronto_path = os.path.join(data_path,"toronto")
+        clean_path = os.path.join(toronto_path,"Toronto.mat")
+        noisy_path = os.path.join(toronto_path,"Toronto_SNR7.mat")
+        matlab_clean = scipy.io.loadmat(clean_path)
+        real_signal = np.array(matlab_clean["G"][0][0][2])
+        matlab_noisy = scipy.io.loadmat(noisy_path)
+        features = np.array(matlab_noisy["G"][0][0][2])
+        name = "toronto"
+        np.savez(os.path.join(refined_path,"features",name+".npz"), x=features, y=real_signal)
+        #Prepare matlab
+        matlab_dict = dict(x=features.T,y=real_signal.T)
+        scipy.io.savemat(os.path.join(refined_path,"features",name+".mat"),matlab_dict)
+        scaler = sklearn.preprocessing.MinMaxScaler(feature_range=(0, 1))
+        features = scaler.fit_transform(features.reshape(features.shape[0],-1))
+        matlab_dict = dict(x=features.reshape(features.shape[0],-1).T,y=real_signal)
+        scipy.io.savemat(os.path.join(refined_path,"features",name+"_minmaxscaled.mat"),matlab_dict)
+        print(name+"_minmaxscaled.mat")
+        print(features.shape)
+
     elif dataset == "ESC-50":
         csv_path = os.path.join(ESC_PATH,"meta","esc50.csv")
         audio_path = os.path.join(data_path,ESC_PATH,"audio")
         df = pandas.read_csv(os.path.join(data_path,csv_path))
-
+        name = "esc-50"
         labels = list()
         all_features = list()
         if save_raw:
@@ -107,7 +145,17 @@ def extract_features(dataset=dataset_default, data_path=data_path_default, refin
         features = np.concatenate(all_features)
         labels = np.concatenate(labels)
         print(np.bincount(labels),features.shape,labels.shape)
-        np.savez(os.path.join(refined_path,"features","esc-50.npz"), x=features.reshape(features.shape[0],-1), y=labels)
+        np.savez(os.path.join(refined_path,"features",name+".npz"), x=features.reshape(features.shape[0],-1), y=labels)
+        #Prepare for matlab
+        matlab_dict = dict(x=features.reshape(features.shape[0],-1).T,y=labels)
+        scipy.io.savemat(os.path.join(refined_path,"features",name+".mat"),matlab_dict)
+
+        scaler = sklearn.preprocessing.MinMaxScaler(feature_range=(0, 1))
+        features = scaler.fit_transform(features.reshape(features.shape[0],-1))
+        matlab_dict = dict(x=features.reshape(features.shape[0],-1).T,y=labels)
+        scipy.io.savemat(os.path.join(refined_path,"features",name+"_minmaxscaled.mat"),matlab_dict)
+
+
         if save_raw:
             np.savez(os.path.join(refined_path,"raw","esc-50.npz"), x=images.reshape(images.shape[0],-1), y=labels)
         
