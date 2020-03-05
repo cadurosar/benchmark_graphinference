@@ -14,7 +14,6 @@ import sklearn
 import sklearn.preprocessing
 
 SGC.utils.set_seed(0, True)
-random_state = np.random.RandomState(0)
 use_cuda = True
 
 datasets = ['STL',"flowers102",'ESC-50',"cora"]
@@ -237,7 +236,7 @@ def test_regression(model, test_features, test_labels):
     return SGC.metrics.accuracy(model(test_features), test_labels)
 
 
-def run_semi_supervised_benchmark(dataset=dataset_default,refined_path=refined_path_default,graph_path=graph_path_default,model=model_default,minmaxscaler=False):
+def run_semi_supervised_benchmark(dataset=dataset_default,refined_path=refined_path_default,graph_path=graph_path_default,model=model_default,minmaxscaler=False,runs=1,split=20):
 
     if dataset == "STL":
         file = "stl.npz"
@@ -255,72 +254,76 @@ def run_semi_supervised_benchmark(dataset=dataset_default,refined_path=refined_p
         file = "cora.npz"
         nodes = 2708
         n_clusters = 7
+    torch.manual_seed(0)   
 
     file_path = os.path.join(refined_path_default,file)
     data = np.load(file_path,allow_pickle=True)
     features = data["x"]
     labels = data["y"]
-    graph = generate_graph.read_adjacence_matrix(nodes,graph_path)
-    train_examples = max(1,nodes//(20*n_clusters))
-    idx_train,idx_val,idx_test = get_train_val_test_split(random_state,
-                             labels,
-                             train_examples_per_class=int(train_examples), val_size=0)
     if minmaxscaler:
         scaler = sklearn.preprocessing.MinMaxScaler(feature_range=(0, 1))
         features = scaler.fit_transform(features)
-
-    
-    # porting to pytorch
+    graph = generate_graph.read_adjacence_matrix(nodes,graph_path)
+    random_state = np.random.RandomState(0)
+    accs_train, accs_test = list(), list()
+    train_examples = max(1,nodes//(split*n_clusters))
     features = torch.FloatTensor(features)
     labels = torch.LongTensor(labels)
-    #labels = torch.max(labels, dim=1)[1]
-    idx_train = torch.LongTensor(idx_train)
-    idx_val = torch.LongTensor(idx_val)
-    idx_test = torch.LongTensor(idx_test)
-
+    labels_numpy = labels.clone().numpy()
     if use_cuda:
         features = features.cuda()
         labels = labels.cuda()
-        idx_train = idx_train.cuda()
-        idx_val = idx_val.cuda()
-        idx_test = idx_test.cuda()
+    if model == "SGC":
+        degree = 2
+        adj, features = SGC.utils.preprocess_citation(graph, features,normalization="None")
+        adj = SGC.utils.sparse_mx_to_torch_sparse_tensor(adj).float()
+        if use_cuda:
+            adj = adj.cuda()
+            features = features.cuda()        
+        features, _ = SGC.utils.sgc_precompute(features, adj, degree)
+    for seed in range(runs):
+        np.random.seed(seed)
+        idx_train,idx_val,idx_test = get_train_val_test_split(random_state,
+                                 labels_numpy,
+                                 train_examples_per_class=int(train_examples), val_size=0)
 
 
-    if model in ("LogReg","SGC"):
-        if model == "LogReg":
-            model = LogisticRegression(features.size(1),labels.max().item()+1)
-            degree = 0
-            if use_cuda:
-                model.cuda()
+        # porting to pytorch
+        idx_train = torch.LongTensor(idx_train)
+        idx_val = torch.LongTensor(idx_val)
+        idx_test = torch.LongTensor(idx_test)
 
-        elif model == "SGC":
-            degree = 2
-            adj, features = SGC.utils.preprocess_citation(graph, features,normalization="None")
-            adj = SGC.utils.sparse_mx_to_torch_sparse_tensor(adj).float()
-            if use_cuda:
-                adj = adj.cuda()
-                features = features.cuda()
+        if use_cuda:
+            idx_train = idx_train.cuda()
+            idx_val = idx_val.cuda()
+            idx_test = idx_test.cuda()
 
 
-            model = SGC.models.get_model("SGC", features.size(1), labels.max().item()+1, 0, 0, use_cuda)
+        if model in ("LogReg","SGC"):
+            if model == "LogReg":
+                local_model = LogisticRegression(features.size(1),labels.max().item()+1)
+                degree = 0
+                if use_cuda:
+                    local_model.cuda()
 
-            features, _ = SGC.utils.sgc_precompute(features, adj, degree)
+            elif model == "SGC":
+                local_model = SGC.models.get_model("SGC", features.size(1), labels.max().item()+1, 0, 0, use_cuda)
 
-        model = train_regression(model, features[idx_train], labels[idx_train], features[idx_val], labels[idx_val],
-                                 100, 0, 0.001)
-        acc_train = test_regression(model, features[idx_train], labels[idx_train]).item()*100
-        acc_val = 0#test_regression(model, features[idx_val], labels[idx_val]).item()*100
-        acc_test = test_regression(model, features[idx_test], labels[idx_test]).item()*100
 
-    else:
-        model = LabelPropagation(torch.FloatTensor(graph),False)
-        model.fit(labels,idx_train)
-        acc_train = SGC.metrics.accuracy(model.predict()[idx_train], labels[idx_train]).item()*100
-        acc_val = 0#SGC.metrics.accuracy(model.predict()[idx_val], labels[idx_val]).item()*100
-        acc_test = SGC.metrics.accuracy(model.predict()[idx_test], labels[idx_test]).item()*100
+            local_model = train_regression(local_model, features[idx_train], labels[idx_train], features[idx_val], labels[idx_val],
+                                     100, 0, 0.001)
+            acc_train = test_regression(local_model, features[idx_train], labels[idx_train]).item()*100
+            acc_test = test_regression(local_model, features[idx_test], labels[idx_test]).item()*100
+
+        else:
+            local_model = LabelPropagation(torch.FloatTensor(graph),False)
+            local_model.fit(labels,idx_train)
+            acc_train = SGC.metrics.accuracy(local_model.predict()[idx_train], labels[idx_train]).item()*100
+            acc_test = SGC.metrics.accuracy(local_model.predict()[idx_test], labels[idx_test]).item()*100
+        accs_train.append(acc_train)
+        accs_test.append(acc_test)
         
-        
-    return acc_train, acc_val, acc_test
+    return np.mean(accs_train), np.std(accs_train),np.mean(accs_test),np.std(accs_test)
 
 if __name__ == "__main__":
     import argparse
@@ -341,5 +344,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     
-    acc_train, acc_val, acc_test = run_semi_supervised_benchmark(dataset=args.dataset,graph_path=args.graph_path,refined_path=args.refined_path,model=args.model)
-    print("Train Accuracy: {:.2f} Validation Accuracy: {:.2f} Test Accuracy: {:.2f}".format(acc_train,acc_val, acc_test))
+    acc_train, acc_train_std, acc_test, acc_test_std = run_semi_supervised_benchmark(dataset=args.dataset,graph_path=args.graph_path,refined_path=args.refined_path,model=args.model,split=5,runs=100,minmaxscaler=True)
+    print("Train Accuracy: {:.2f}, Test Accuracy: {:.2f}".format(acc_train, acc_test))
+    print("Train STD: {:.2f}, Test STD: {:.2f}".format(acc_train_std, acc_test_std))
