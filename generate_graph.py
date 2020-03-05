@@ -7,10 +7,14 @@ import scipy
 import numpy as np
 import os
 import gzip
+import nnk
+import nnk.graph_construction
+import nnk.graph_utils
 
-datasets = ['STL',"flowers102",'ESC-50',"cora"]
+
+datasets = ['STL',"flowers102",'ESC-50',"cora","toronto"]
 dataset_default = datasets[0]
-graph_types = ["Cosine",'RBF','Covariance',"GraphLasso"]
+graph_types = ["Cosine",'RBF','Covariance',"GraphLasso","L2Distance"]
 graph_type_default = graph_types[0]
 nn_default = 0
 refined_path_default = os.path.join("refined_datasets","features")
@@ -20,6 +24,7 @@ normalization_default = "None"
 
 def save_adjacence_matrix(adjacence_matrix, file_path, precision=None):
     with gzip.open(file_path, 'wb') as f:
+        strings = list()
         for idx in range(adjacence_matrix.shape[0]):
             line = adjacence_matrix[idx,:]
             values = np.where(line != 0)[0]
@@ -28,7 +33,9 @@ def save_adjacence_matrix(adjacence_matrix, file_path, precision=None):
                 if precision:
                     value = np.round(value,precision)
                 write_string = "{}\t{}\t{}\n".format(idx,idx2,value)
-                f.write(str.encode(write_string))
+                strings.append(write_string)
+        strings = "".join(strings)
+        f.write(str.encode(strings))
 
 def read_adjacence_matrix(nodes, file_path):
     adj_matrix = np.zeros((nodes,nodes))
@@ -68,7 +75,6 @@ def covariance(matrix):
     m = matrix.copy()
     w = f * a
     v1 = np.sum(w)
-    v2 = np.sum(a)
     alfa = np.sum(m, axis=1, keepdims=True) / v1
     _cov = np.dot(m-alfa, (m-alfa).T) / v1    
     return _cov
@@ -92,7 +98,7 @@ def knn_over_matrix(matrix,k=4):
 def force_symmetry(matrix):
     return np.minimum(matrix+matrix.T,1)
 
-def generate_graph(dataset=dataset_default,graph_type=graph_type_default,minmaxscaler=False,nn=nn_default,refined_path=refined_path_default,normalization=normalization_default,save_path=save_path_default):
+def generate_graph(dataset=dataset_default,graph_type=graph_type_default,minmaxscaler=False,nn=nn_default,refined_path=refined_path_default,normalization=normalization_default,save_path=save_path_default,is_nnk=False):
 
     if dataset == "STL":
         file = "stl.npz"
@@ -102,6 +108,8 @@ def generate_graph(dataset=dataset_default,graph_type=graph_type_default,minmaxs
         file = "flowers102.npz"
     elif dataset == "cora":
         file = "cora.npz"
+    elif dataset == "toronto":
+        file = "toronto.npz"
     file_path = os.path.join(refined_path_default,file)
     data = np.load(file_path,allow_pickle=True)
     features = data["x"]
@@ -121,11 +129,36 @@ def generate_graph(dataset=dataset_default,graph_type=graph_type_default,minmaxs
         graph_lasso = sklearn.covariance.GraphicalLasso(max_iter=1000)
         cov = graph_lasso.fit(features.T)
         graph = np.around(cov.covariance_,decimals=3)
+    elif graph_type == "L2Distance":
+        if not is_nnk or nn <=0:
+            raise Exception("Can only use distance graph if using NNK and nn > 0")
+        else:
+            graph = nnk.graph_utils.create_distance_matrix(features)
+
     else:
         raise Exception("Graph type {} is not coded".format(args.type))
 
-    if args.nn > 0:
-        graph = create_knnadjacence_matrix(graph,args.nn)[1]
+    if nn > 0:
+        if is_nnk:
+            D_type = "similarity" 
+            if graph_type == "L2Distance":
+                D_type = "distance"
+                knn_mask = nnk.graph_utils.create_directed_KNN_mask(D=graph, knn_param=nn, D_type=D_type)
+                sigma = np.mean(graph[:, knn_mask[:, -1]]) / 3
+                graph = np.exp(-(graph ** 2) / (2 * sigma ** 2))
+            else:
+                if graph_type == "Covariance":
+                    np.fill_diagonal(graph,1)
+                knn_mask = nnk.graph_utils.create_directed_KNN_mask(D=graph, knn_param=nn, D_type=D_type)
+
+            graph = np.array(nnk.graph_construction.nnk_graph(graph, knn_mask, nn, 1.0).todense())
+            graph = graph*(graph > 1e-4)
+            if dataset != "toronto":
+                np.fill_diagonal(graph,1)
+        else:
+            if dataset == "toronto":
+                np.fill_diagonal(graph,0)
+            graph = create_knnadjacence_matrix(graph,args.nn)[1]
 
     if normalization == "RandomWalk":
         d = np.sum(graph, 1)
@@ -139,7 +172,7 @@ def generate_graph(dataset=dataset_default,graph_type=graph_type_default,minmaxs
         d = np.power(d,-1/2)
         d = np.diag(d)
         graph = np.dot(np.dot(d,graph),d)
-    save_file = os.path.join(save_path,"{}_{}_{}_{}_{}.gz".format(dataset,graph_type,minmaxscaler,nn,normalization))
+    save_file = os.path.join(save_path,"{}_{}_{}_{}_{}_{}_False.gz".format(dataset,graph_type,minmaxscaler,nn,normalization,is_nnk))
     save_adjacence_matrix(graph,save_file)
     return graph
 
@@ -155,6 +188,9 @@ if __name__ == "__main__":
     parser.add_argument('--minmaxscaler',
                           action="store_true", default=False,
                           help='Use a min max scaler for the features')
+    parser.add_argument('--nnk',
+                          action="store_true", default=False,
+                          help='Use nnk instead of knn')
     parser.add_argument('--refined_path',
                           type=str, default=refined_path_default,
                           help='Refined dataset path')
@@ -172,4 +208,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     print(args)
-    generate_graph(dataset=args.dataset,graph_type=args.graph_type,minmaxscaler=args.minmaxscaler,refined_path=args.refined_path,normalization=args.normalization,nn=args.nn,save_path=args.save_path)
+    generate_graph(dataset=args.dataset,graph_type=args.graph_type,minmaxscaler=args.minmaxscaler,refined_path=args.refined_path,normalization=args.normalization,nn=args.nn,save_path=args.save_path,is_nnk=args.nnk)
