@@ -65,16 +65,16 @@ Train STD: 1.31, Test STD: 0.97
 
 ### Graph denoising example
 
-To run the graph denoising using a fully connected RBF graph:
+To run the graph denoising using an NNK 1500 neighbors graph:
 
 ```
-python graph_denoising.py --graph_path graph/toronto_RBF_False_0_BothSides_False_False.gz
+python graph_denoising.py --graph_path graph/toronto_RBF_False_1500_BothSides_True_False.gz
 ```
 
 result:
 
 ```
-Best SnR: 10.20, Best Threshold: 1.25
+Best SnR: 9.99, Best Threshold: 0.20
 ```
 
 

@@ -26,9 +26,9 @@ def benchmark_all():
             
             try:
                 if minmaxscaler == "False":
-                    acc_train, acc_train_std, acc_test, acc_test_std = semi_supervised_benchmark.run_semi_supervised_benchmark(dataset=dataset,graph_path=os.path.join(graph_path_default,file),minmaxscaler=False,runs=100,split=5)
+                    acc_train, acc_train_std, acc_test, acc_test_std = semi_supervised_benchmark.run_semi_supervised_benchmark(dataset=dataset,graph_path=os.path.join(graph_path_default,file),minmaxscaler=False,runs=100,split=20)
                 else:
-                    acc_train, acc_train_std, acc_test, acc_test_std = semi_supervised_benchmark.run_semi_supervised_benchmark(dataset=dataset,graph_path=os.path.join(graph_path_default,file),minmaxscaler=True,runs=100,split=5)                    
+                    acc_train, acc_train_std, acc_test, acc_test_std = semi_supervised_benchmark.run_semi_supervised_benchmark(dataset=dataset,graph_path=os.path.join(graph_path_default,file),minmaxscaler=True,runs=100,split=20)                    
             except:
                 print("Error semi supervised {}".format(file))
             graph_dict["acc_train"] = acc_train
