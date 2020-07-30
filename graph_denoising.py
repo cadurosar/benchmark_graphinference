@@ -9,7 +9,7 @@ import pygsp
 datasets = ["toronto"]
 dataset_default = datasets[0]
 refined_path_default = os.path.join("refined_datasets","features")
-graph_path_default = os.path.join("graph","toronto_RBF_False_0_None.gz")
+graph_path_default = os.path.join("graph","toronto_RBF_False_5_None_False_False_False.gz")
 
 def compute_snr(noisy_signal,signal):
     diff = np.array(noisy_signal,dtype=np.float32)-np.array(signal,dtype=np.float32)

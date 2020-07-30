@@ -19,9 +19,10 @@ def benchmark_all():
             nn = splitted[3]
             normalization = splitted[4]
             nnk = splitted[5]
-            kalofolias = splitted[6]
+            self_loop = splitted[6]
+            kalofolias = splitted[7]
             
-            graph_dict = dict(dataset=dataset,graph_type=graph_type,minmaxscaler=minmaxscaler,nn=nn,normalization=normalization,nnk=nnk,kalofolias=kalofolias)
+            graph_dict = dict(dataset=dataset,graph_type=graph_type,minmaxscaler=minmaxscaler,nn=nn,normalization=normalization,nnk=nnk,kalofolias=kalofolias,self_loop=self_loop)
             label_prop_train, label_prop_train_std,label_prop_test,label_prop_test_std = 0,0,0,0
 
             

@@ -8,6 +8,9 @@ do
             do
                 time python generate_graph.py --dataset $dataset --normalization $normalization --graph_type $graph_type --nn $nn --minmaxscaler
                 time python generate_graph.py --dataset $dataset --normalization $normalization --graph_type $graph_type --nn $nn
+                time python generate_graph.py --dataset $dataset --normalization $normalization --graph_type $graph_type --nn $nn --minmaxscaler --add_self_loops
+                time python generate_graph.py --dataset $dataset --normalization $normalization --graph_type $graph_type --nn $nn --add_self_loops
+
             done
         done
         
@@ -24,6 +27,8 @@ do
             do
                 time python generate_graph.py --dataset $dataset --normalization $normalization --graph_type $graph_type --nn $nn --minmaxscaler --nnk
                 time python generate_graph.py --dataset $dataset --normalization $normalization --graph_type $graph_type --nn $nn --nnk
+                time python generate_graph.py --dataset $dataset --normalization $normalization --graph_type $graph_type --nn $nn --minmaxscaler --add_self_loops --nnk
+                time python generate_graph.py --dataset $dataset --normalization $normalization --graph_type $graph_type --nn $nn --add_self_loops --nnk
             done
         done
         

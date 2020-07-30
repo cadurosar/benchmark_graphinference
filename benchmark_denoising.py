@@ -21,9 +21,10 @@ def benchmark_all():
         nn = splitted[3]
         normalization = splitted[4]
         nnk = splitted[5]
-        kalofolias = splitted[6]
+        self_loop=self_loop = splitted[6]
+        kalofolias = splitted[7]
         try:
-            graph_dict = dict(dataset=dataset,graph_type=graph_type,minmaxscaler=minmaxscaler,nn=nn,normalization=normalization,nnk=nnk,kalofolias=kalofolias)
+            graph_dict = dict(dataset=dataset,graph_type=graph_type,minmaxscaler=minmaxscaler,nn=nn,normalization=normalization,nnk=nnk,kalofolias=kalofolias,self_loop=self_loop)
             snr, threshold = graph_denoising.run_graph_denoising(dataset=dataset,graph_path=os.path.join(graph_path_default,file))
             graph_dict["snr"] = snr
             graph_dict["threshold"] = threshold

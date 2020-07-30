@@ -19,13 +19,14 @@ def benchmark_all():
             nn = splitted[3]
             normalization = splitted[4]
             nnk = splitted[5]
-            kalofolias = splitted[6]
+            self_loop = splitted[6]
+            kalofolias = splitted[7]
             
-            graph_dict = dict(dataset=dataset,graph_type=graph_type,minmaxscaler=minmaxscaler,nn=nn,normalization=normalization,nnk=nnk,kalofolias=kalofolias)
+            graph_dict = dict(dataset=dataset,graph_type=graph_type,minmaxscaler=minmaxscaler,nn=nn,normalization=normalization,nnk=nnk,kalofolias=kalofolias,self_loop=self_loop)
             ami,nmi,ari = 0,0,0
 
             try:
-                ami,nmi, ari = unsupervised_benchmark.run_unsupervised_benchmark(dataset=dataset,graph_path=os.path.join(graph_path_default,file),assign_labels="discretize")
+                ami,nmi, ari = unsupervised_benchmark.run_unsupervised_benchmark(dataset=dataset,graph_path=os.path.join(graph_path_default,file),assign_labels="kmeans")
             except:
                 print("Error unsupervised {}".format(file))
             
@@ -38,7 +39,7 @@ def benchmark_all():
             print(file)
             continue
         df = pd.DataFrame(all_dicts)
-        df.to_csv("results/unsupervised.csv",index=False)
+        df.to_csv("results/unsupervised_kmeans.csv",index=False)
 #    print(df)
 if __name__ == "__main__":
 

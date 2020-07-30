@@ -98,7 +98,7 @@ def knn_over_matrix(matrix,k=4):
 def force_symmetry(matrix):
     return np.minimum(matrix+matrix.T,1)
 
-def generate_graph(dataset=dataset_default,graph_type=graph_type_default,minmaxscaler=False,nn=nn_default,refined_path=refined_path_default,normalization=normalization_default,save_path=save_path_default,is_nnk=False):
+def generate_graph(dataset=dataset_default,graph_type=graph_type_default,minmaxscaler=False,nn=nn_default,refined_path=refined_path_default,normalization=normalization_default,save_path=save_path_default,is_nnk=False,add_self_loops=False):
 
     if dataset == "STL":
         file = "stl.npz"
@@ -153,12 +153,13 @@ def generate_graph(dataset=dataset_default,graph_type=graph_type_default,minmaxs
 
             graph = np.array(nnk.graph_construction.nnk_graph(graph, knn_mask, nn, 1.0).todense())
             graph = graph*(graph > 1e-4)
-            if dataset != "toronto":
-                np.fill_diagonal(graph,1)
         else:
-            if dataset == "toronto":
-                np.fill_diagonal(graph,0)
             graph = create_knnadjacence_matrix(graph,args.nn)[1]
+
+    if add_self_loops:
+        np.fill_diagonal(graph,1)
+    else:
+        np.fill_diagonal(graph,0)
 
     if normalization == "RandomWalk":
         d = np.sum(graph, 1)
@@ -172,7 +173,7 @@ def generate_graph(dataset=dataset_default,graph_type=graph_type_default,minmaxs
         d = np.power(d,-1/2)
         d = np.diag(d)
         graph = np.dot(np.dot(d,graph),d)
-    save_file = os.path.join(save_path,"{}_{}_{}_{}_{}_{}_False.gz".format(dataset,graph_type,minmaxscaler,nn,normalization,is_nnk))
+    save_file = os.path.join(save_path,"{}_{}_{}_{}_{}_{}_{}_False.gz".format(dataset,graph_type,minmaxscaler,nn,normalization,is_nnk,add_self_loops))
     save_adjacence_matrix(graph,save_file)
     return graph
 
@@ -194,6 +195,9 @@ if __name__ == "__main__":
     parser.add_argument('--refined_path',
                           type=str, default=refined_path_default,
                           help='Refined dataset path')
+    parser.add_argument('--add_self_loops',
+                          action="store_true", default=False,
+                          help='Add self loops before normalizing')
     parser.add_argument('--normalization',
                           choices=normalizations, default=normalization_default,
                           help='Adjacency matrix normalization')
@@ -208,4 +212,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     print(args)
-    generate_graph(dataset=args.dataset,graph_type=args.graph_type,minmaxscaler=args.minmaxscaler,refined_path=args.refined_path,normalization=args.normalization,nn=args.nn,save_path=args.save_path,is_nnk=args.nnk)
+    generate_graph(dataset=args.dataset,graph_type=args.graph_type,minmaxscaler=args.minmaxscaler,refined_path=args.refined_path,normalization=args.normalization,nn=args.nn,save_path=args.save_path,is_nnk=args.nnk, add_self_loops=args.add_self_loops)

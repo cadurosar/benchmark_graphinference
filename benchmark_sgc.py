@@ -19,16 +19,14 @@ def benchmark_all():
             nn = splitted[3]
             normalization = splitted[4]
             nnk = splitted[5]
-            kalofolias = splitted[6]
+            self_loop = splitted[6]
+            kalofolias = splitted[7]
             
-            graph_dict = dict(dataset=dataset,graph_type=graph_type,minmaxscaler=minmaxscaler,nn=nn,normalization=normalization,nnk=nnk,kalofolias=kalofolias)
+            graph_dict = dict(dataset=dataset,graph_type=graph_type,minmaxscaler=minmaxscaler,nn=nn,normalization=normalization,nnk=nnk,kalofolias=kalofolias,self_loop=self_loop)
             acc_train, acc_train_std, acc_test, acc_test_std = 0,0,0,0
             
             try:
-                if minmaxscaler == "False":
-                    acc_train, acc_train_std, acc_test, acc_test_std = semi_supervised_benchmark.run_semi_supervised_benchmark(dataset=dataset,graph_path=os.path.join(graph_path_default,file),minmaxscaler=False,runs=100,split=20)
-                else:
-                    acc_train, acc_train_std, acc_test, acc_test_std = semi_supervised_benchmark.run_semi_supervised_benchmark(dataset=dataset,graph_path=os.path.join(graph_path_default,file),minmaxscaler=True,runs=100,split=20)                    
+                acc_train, acc_train_std, acc_test, acc_test_std = semi_supervised_benchmark.run_semi_supervised_benchmark(dataset=dataset,graph_path=os.path.join(graph_path_default,file),minmaxscaler=minmaxscaler,runs=1000,split=20)
             except:
                 print("Error semi supervised {}".format(file))
             graph_dict["acc_train"] = acc_train
@@ -40,7 +38,7 @@ def benchmark_all():
             print(file)
             continue
         df = pd.DataFrame(all_dicts)
-        df.to_csv("results/sgc.csv",index=False)
+        df.to_csv("results/sgc1000.csv",index=False)
 #    print(df)
 if __name__ == "__main__":
 
